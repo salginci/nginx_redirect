@@ -1,0 +1,67 @@
+stages:
+ - publish-to-do
+ - publish-to-prod
+
+ 
+variables:
+  DOCKER_DRIVER: overlay
+  DOCKER_HOST: tcp://docker:2375 
+  DOCKER_TLS_CERTDIR: ""
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  FF_GITLAB_REGISTRY_HELPER_IMAGE: 1
+
+
+publish-to-do:
+  image: docker:20-dind
+  stage: publish-to-do
+  only:
+  - stage
+  services:
+     - name: docker:20-dind
+       alias: docker
+       command: ["--tls=false"]
+
+  before_script:
+    - cat /etc/os-release
+    - apk update 
+    - apk --no-cache add curl
+    - curl -Lo doctl.tar.gz https://github.com/digitalocean/doctl/releases/download/v1.91.0/doctl-1.91.0-linux-amd64.tar.gz && tar xf doctl.tar.gz
+    - chmod u+x doctl
+    - mv doctl /usr/local/bin/doctl
+  script:
+    - echo $DO_TOKEN
+    - echo $GCP_PROJECT_ID
+    - doctl auth init --access-token $DO_TEST_TOKEN
+    - doctl registry login 
+    - docker build -t registry.digitalocean.com/$DO_TEST_REGISTRY/hr-web-admin-app --build-arg VUE_APP_API_URL=$API_TEST_URL .
+    - docker push registry.digitalocean.com/$DO_TEST_REGISTRY/hr-web-admin-app
+    
+
+publish-to-prod:
+  image: docker:20-dind
+  stage: publish-to-prod
+  only:
+  - main
+  services:
+     - name: docker:20-dind
+       alias: docker
+       command: ["--tls=false"]
+
+  before_script:
+    - cat /etc/os-release
+    - apk update 
+    - apk --no-cache add curl
+    - curl -Lo doctl.tar.gz https://github.com/digitalocean/doctl/releases/download/v1.91.0/doctl-1.91.0-linux-amd64.tar.gz && tar xf doctl.tar.gz
+    - chmod u+x doctl
+    - mv doctl /usr/local/bin/doctl
+  script:
+    - echo $DO_TOKEN
+    - echo $GCP_PROJECT_ID
+    - doctl auth init --access-token $DO_TOKEN
+    - doctl registry login 
+    - docker build -t registry.digitalocean.com/$DO_PROD_REGISTRY/hr-web-admin-app --build-arg VUE_APP_API_URL=$API_PROD_URL .
+    - docker push registry.digitalocean.com/$DO_PROD_REGISTRY/hr-web-admin-app
+    
+
+
+

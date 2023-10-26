@@ -1,0 +1,17 @@
+    # File: cloudbuild.yaml
+steps:
+    # build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/hr-web-admin-app', '.','--build-arg=ENV=$_MY_VARIABLE,$_VUE_APP_API_URL,$_VUE_APP_API_MODE', ]
+    # push the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'push', 'gcr.io/$PROJECT_ID/hr-web-admin-app']
+    # deploy to Cloud Run
+  - name: "gcr.io/cloud-builders/gcloud"
+    args: ['run', 'deploy', 'hr-web-admin-app',"--port", "80", '--image', 'gcr.io/$PROJECT_ID/hr-web-admin-app', '--region', 'europe-west1', '--platform', 'managed', '--allow-unauthenticated',--set-env-vars,  "VUE_APP_API_URL='xxx',VUE_APP_API_MODE='Prod'"]
+substitutions:
+  _MY_VARIABLE: default value if not passed in the build command
+  _VUE_APP_API_URL: default api url value if not passed in the build command
+  _VUE_APP_API_MODE: default valu DE if not passed in the build command
+        
+
